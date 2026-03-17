@@ -304,11 +304,6 @@ Transform:
   - {fileID: 259202072}
   m_Father: {fileID: 1622768279}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!4 &1078374905 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4516715554553701928, guid: 9eb7b99039caf974089006adec19357b, type: 3}
-  m_PrefabInstance: {fileID: 502554616784345429}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1143830251 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8391772836969365435, guid: 9eb7b99039caf974089006adec19357b, type: 3}
@@ -482,6 +477,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573570117}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1608036555 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3615467884513605621, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+  m_PrefabInstance: {fileID: 502554616784345429}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1622768278
 GameObject:
   m_ObjectHideFlags: 0
@@ -790,7 +790,7 @@ PrefabInstance:
     - target: {fileID: 1150771961417649058, guid: 9eb7b99039caf974089006adec19357b, type: 3}
       propertyPath: cameraPoint
       value: 
-      objectReference: {fileID: 1078374905}
+      objectReference: {fileID: 1608036555}
     - target: {fileID: 1150771961417649058, guid: 9eb7b99039caf974089006adec19357b, type: 3}
       propertyPath: skeletonRoot
       value: 

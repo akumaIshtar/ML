@@ -72,12 +72,12 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
 
         private void LateUpdate()
         {
-            transform.localRotation = _player.transform.localRotation * cameraBone.localRotation;
-            // if (cameraBone != null)
-            // {
-            //     transform.position = cameraBone.position;
-            //     transform.rotation = cameraBone.rotation;
-            // }
+            //transform.localRotation = _player.transform.localRotation * cameraBone.localRotation;
+            if (cameraBone != null)
+            {
+                transform.position = cameraBone.position;
+                transform.rotation = cameraBone.rotation;
+            }
             UpdateCameraShake();
             UpdateFOV();
         }

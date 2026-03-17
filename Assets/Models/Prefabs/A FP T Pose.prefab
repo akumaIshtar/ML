@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6887558905623098906}
   m_Layer: 0
-  m_Name: ik_handgun_additive
+  m_Name: ik_hand_gun_additive
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
