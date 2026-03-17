@@ -10,7 +10,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
     public class FPSCameraAnimator : MonoBehaviour
     {
         [SerializeField] private Transform cameraBone;
-        
+
         private FPSCameraShake _activeShake;
         private Vector3 _cameraShake;
         private Vector3 _cameraShakeTarget;
@@ -19,7 +19,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
         private UnityEngine.Camera _camera;
         private FPSPlayer _player;
         private float _baseFov;
-        
+
         public virtual void PlayCameraShake(FPSCameraShake newShake)
         {
             if (newShake == null) return;
@@ -31,7 +31,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
             _cameraShakeTarget.y = FPSCameraShake.GetTarget(_activeShake.yaw);
             _cameraShakeTarget.z = FPSCameraShake.GetTarget(_activeShake.roll);
         }
-        
+
         protected virtual void UpdateCameraShake()
         {
             if (_activeShake == null) return;
@@ -50,7 +50,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
             target.x *= _cameraShakeTarget.x;
             target.y *= _cameraShakeTarget.y;
             target.z *= _cameraShakeTarget.z;
-            
+
             _cameraShake = Vector3.Lerp(_cameraShake, target, alpha);
             transform.rotation *= Quaternion.Euler(_cameraShake);
         }
@@ -58,7 +58,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
         protected virtual void UpdateFOV()
         {
             if (_camera == null || _player == null) return;
-            
+
             _camera.fieldOfView = Mathf.Lerp(_baseFov,
                 _player.GetActiveWeapon().weaponSettings.aimFov, _player.AdsWeight);
         }
@@ -73,6 +73,11 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Camera
         private void LateUpdate()
         {
             transform.localRotation = _player.transform.localRotation * cameraBone.localRotation;
+            // if (cameraBone != null)
+            // {
+            //     transform.position = cameraBone.position;
+            //     transform.rotation = cameraBone.rotation;
+            // }
             UpdateCameraShake();
             UpdateFOV();
         }

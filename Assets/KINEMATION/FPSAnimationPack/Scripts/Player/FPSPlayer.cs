@@ -89,6 +89,8 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
         private KTransform _localCameraPoint;
         private CharacterController _controller;
 
+        private Quaternion _initialRotation;
+
         private void EquipWeapon_Incremental()
         {
             GetActiveWeapon().gameObject.SetActive(false);
@@ -318,6 +320,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
 
         private void Start()
         {
+            _initialRotation = transform.localRotation;
             _animator = GetComponent<Animator>();
             _controller = transform.root.GetComponent<CharacterController>();
             _recoilAnimation = GetComponent<RecoilAnimation>();
@@ -328,7 +331,9 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
             _tacSprintLayerIndex = _animator.GetLayerIndex("TacSprint");
 
             KTransform root = new KTransform(transform);
-            _localCameraPoint = root.GetRelativeTransform(new KTransform(cameraPoint), false);
+            KTransform camPointT = new KTransform(cameraPoint);
+            //camPointT.rotation *= Quaternion.Euler(0, 180, 0);
+            _localCameraPoint = root.GetRelativeTransform(camPointT, false);
 
             foreach (var prefab in playerSettings.weaponPrefabs)
             {
@@ -358,7 +363,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
                 localWeapon.rotation *= ANIMATED_OFFSET;
 
                 Vector3 correctedPos = _localCameraPoint.position - localWeapon.position;
-                component.adsPose.position = new Vector3(correctedPos.x,correctedPos.y,-correctedPos.z);
+                component.adsPose.position = new Vector3(correctedPos.x,correctedPos.y,correctedPos.z);
                 component.adsPose.rotation = Quaternion.Inverse(localWeapon.rotation);
 
                 _weapons.Add(component);
@@ -396,9 +401,11 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
             _animator.SetLayerWeight(_rightHandLayerIndex, _animator.GetFloat(RIGHT_HAND_WEIGHT));
 
             Vector3 cameraPosition = -_localCameraPoint.position;
+            Vector3 correctedComPos = new Vector3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
 
             transform.localRotation = Quaternion.Euler(_lookInput.y, 0f, 0f);
-            transform.localPosition = transform.localRotation * cameraPosition - cameraPosition;
+            transform.localPosition = transform.localRotation * correctedComPos - correctedComPos;
+
 
             if (_controller != null)
             {

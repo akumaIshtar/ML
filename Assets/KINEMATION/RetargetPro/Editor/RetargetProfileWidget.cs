@@ -18,22 +18,22 @@ namespace KINEMATION.RetargetPro.Editor
         public Action onComponentAdded;
         public Action onComponentPasted;
         public Action onComponentRemoved;
-        
+
         private SerializedObject _serializedObject;
         private SerializedProperty _componentsProperty;
         private ScriptableObject _asset;
-        
+
         private Type _collectionType;
-        
+
         private List<UnityEditor.Editor> _editors;
 
         private bool _isInitialized;
         private ReorderableList _componentsList;
-        
+
         private GUIStyle _elementButtonStyle;
 
         private Type[] _componentTypes;
-        
+
         private int _editorIndex = -1;
 
         private RetargetProfile _retargetProfile;
@@ -47,30 +47,30 @@ namespace KINEMATION.RetargetPro.Editor
         public void AddComponent(Type type)
         {
             _serializedObject.Update();
-            
+
             ScriptableObject newComponent = CreateNewComponent(type);
-            
+
             Undo.RegisterCreatedObjectUndo(newComponent, "Add Component");
             AssetDatabase.AddObjectToAsset(newComponent, _asset);
-            
+
             _componentsProperty.arraySize++;
             var componentProp = _componentsProperty.GetArrayElementAtIndex(_componentsProperty.arraySize - 1);
             componentProp.objectReferenceValue = newComponent;
 
             _editors.Add(UnityEditor.Editor.CreateEditor(newComponent));
             _serializedObject.ApplyModifiedProperties();
-            
+
             EditorUtility.SetDirty(_asset);
             AssetDatabase.SaveAssetIfDirty(_asset);
 
             var newFeature = _retargetProfile.retargetFeatures[^1];
             newFeature.sourceRig = _retargetProfile.sourceRig;
             newFeature.targetRig = _retargetProfile.targetRig;
-            
+
             onComponentAdded?.Invoke();
             _editorIndex = -1;
         }
-        
+
         private ScriptableObject CreateNewComponent(Type type)
         {
             var instance = ScriptableObject.CreateInstance(type);
@@ -89,24 +89,24 @@ namespace KINEMATION.RetargetPro.Editor
         {
             _editors.RemoveAt(index);
             _serializedObject.Update();
-            
+
             _editorIndex = -1;
-            
+
             var property = _componentsProperty.GetArrayElementAtIndex(index);
             var component = property.objectReferenceValue;
-            
+
             property.objectReferenceValue = null;
             _componentsProperty.DeleteArrayElementAtIndex(index);
-            
+
             _serializedObject.ApplyModifiedProperties();
             Undo.DestroyObjectImmediate(component);
-            
+
             EditorUtility.SetDirty(_asset);
             AssetDatabase.SaveAssets();
-            
+
             onComponentRemoved?.Invoke();
         }
-        
+
         private void CopyComponent(Object component)
         {
             string typeName = component.GetType().AssemblyQualifiedName;
@@ -138,7 +138,7 @@ namespace KINEMATION.RetargetPro.Editor
         {
             int index = (int) userData;
             Object component = _componentsProperty.GetArrayElementAtIndex(index).objectReferenceValue;
-            
+
             if (selected == 0)
             {
                 CopyComponent(component);
@@ -159,19 +159,19 @@ namespace KINEMATION.RetargetPro.Editor
 
         private void SetupReorderableList()
         {
-            _componentsList = new ReorderableList(_serializedObject, _componentsProperty, true, 
+            _componentsList = new ReorderableList(_serializedObject, _componentsProperty, true,
                 false, false, true);
-            
+
             _componentsList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) =>
             {
                 RetargetFeature feature = _retargetProfile.retargetFeatures[index];
                 BasicRetargetFeature basicFeature = feature as BasicRetargetFeature;
-                
+
                 Rect toggleRect = rect;
                 toggleRect.width = 14f;
-                
+
                 bool enabled = EditorGUI.Toggle(toggleRect, feature.featureWeight > 0f);
-                
+
                 if (feature.featureWeight == 0f && enabled)
                 {
                     feature.featureWeight = 1f;
@@ -194,22 +194,22 @@ namespace KINEMATION.RetargetPro.Editor
                 {
                     feature.drawGizmos = false;
                 }
-                
+
                 float iconWidth = 25f;
                 Rect iconRect = new Rect(rect.x + rect.width - iconWidth, rect.y, iconWidth, rect.height);
                 iconRect.y += 2f;
                 iconRect.height -= 3f;
-                
+
                 var iconContent = EditorGUIUtility.IconContent("Refresh");
                 iconContent.tooltip = "Auto map bone chains.";
-                
+
                 if (GUI.Button(iconRect, iconContent))
                 {
                     feature.MapChains();
                 }
 
                 iconRect.x -= iconRect.width + 3f;
-                
+
                 Rect labelsRect = rect;
                 float leftPadding = 16f;
                 labelsRect.x += toggleRect.width + leftPadding;
@@ -218,11 +218,14 @@ namespace KINEMATION.RetargetPro.Editor
                 {
                     labelsRect.width = (iconRect.x - labelsRect.x) / 2f;
 
+
                     EditorGUI.LabelField(labelsRect, basicFeature.sourceChain.chainName);
 
                     labelsRect.x += labelsRect.width + leftPadding;
                     labelsRect.width = iconRect.x - labelsRect.x;
+
                     EditorGUI.LabelField(labelsRect, basicFeature.targetChain.chainName);
+
                 }
                 else
                 {
@@ -244,8 +247,8 @@ namespace KINEMATION.RetargetPro.Editor
 
                     GUI.Label(iconRect, iconContent);
                 }
-                
-                if (Event.current.type == EventType.MouseUp && Event.current.button == 1 
+
+                if (Event.current.type == EventType.MouseUp && Event.current.button == 1
                     && rect.Contains(Event.current.mousePosition))
                 {
                     GUIContent[] menuOptions = new GUIContent[]
@@ -254,8 +257,8 @@ namespace KINEMATION.RetargetPro.Editor
                         new GUIContent("Paste"),
                         new GUIContent("Delete")
                     };
-                
-                    EditorUtility.DisplayCustomMenu(new Rect(Event.current.mousePosition, Vector2.zero), 
+
+                    EditorUtility.DisplayCustomMenu(new Rect(Event.current.mousePosition, Vector2.zero),
                         menuOptions, -1, OnContextMenuSelection, index);
                 }
             };
@@ -263,7 +266,7 @@ namespace KINEMATION.RetargetPro.Editor
             _componentsList.onReorderCallbackWithDetails = (ReorderableList list, int oldIndex, int newIndex) =>
             {
                 UnityEditor.Editor editorToMove = _editors[oldIndex];
-                
+
                 _editors.RemoveAt(oldIndex);
                 if (newIndex > oldIndex)
                 {
@@ -273,7 +276,7 @@ namespace KINEMATION.RetargetPro.Editor
                         return;
                     }
                 }
-                
+
                 _editors.Insert(newIndex, editorToMove);
             };
 
@@ -282,16 +285,16 @@ namespace KINEMATION.RetargetPro.Editor
                 RemoveComponent(list.index);
             };
         }
-        
+
         public void Init(SerializedObject serializedObject)
         {
             _serializedObject = serializedObject;
             _componentsProperty = _serializedObject.FindProperty("retargetFeatures");
             _collectionType = typeof(RetargetFeature);
-            
+
             Assert.IsNotNull(_componentsProperty);
             Assert.IsNotNull(_collectionType);
-            
+
             _asset = _serializedObject.targetObject as ScriptableObject;
             if (_asset == null)
             {
@@ -313,7 +316,7 @@ namespace KINEMATION.RetargetPro.Editor
                 if(type.IsAbstract) continue;
                 collectionTypes.Add(type);
             }
-            
+
             _componentTypes = collectionTypes.ToArray();
             _editors = new List<UnityEditor.Editor>();
 
@@ -324,7 +327,7 @@ namespace KINEMATION.RetargetPro.Editor
                 SerializedProperty element = _componentsProperty.GetArrayElementAtIndex(i);
                 _editors.Add(UnityEditor.Editor.CreateEditor(element.objectReferenceValue));
             }
-            
+
             SetupReorderableList();
             _isInitialized = true;
         }
@@ -332,31 +335,31 @@ namespace KINEMATION.RetargetPro.Editor
         private void DrawWidgetGUI()
         {
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.MinHeight(250f));
-            
+
             _componentsList.DoLayoutList();
             EditorGUILayout.EndScrollView();
-            
+
             EditorGUILayout.Space();
-            
+
             if (GUILayout.Button("Add Retarget Feature", EditorStyles.miniButton))
             {
                 int count = _componentTypes.Length;
-                
+
                 GUIContent[] menuOptions = new GUIContent[count];
                 for (int i = 0; i < count; i++)
                 {
                     menuOptions[i] = new GUIContent(_componentTypes[i].Name);
                 }
-                
-                EditorUtility.DisplayCustomMenu(new Rect(Event.current.mousePosition, Vector2.zero), 
+
+                EditorUtility.DisplayCustomMenu(new Rect(Event.current.mousePosition, Vector2.zero),
                     menuOptions, -1, OnTypeSelected, null);
             }
-            
+
             if (_editorIndex < 0 || _editors.Count == 0)
             {
                 return;
             }
-            
+
             EditorGUILayout.Space();
 
             var style = GUI.skin.box;
