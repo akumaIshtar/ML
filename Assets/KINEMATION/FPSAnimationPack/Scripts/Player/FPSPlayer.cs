@@ -8,6 +8,7 @@ using KINEMATION.KAnimationCore.Runtime.Core;
 using System;
 using System.Collections.Generic;
 using KINEMATION.FPSAnimationPack.Scripts.Camera;
+using Unity.VisualScripting;
 using UnityEngine;
 using Quaternion = UnityEngine.Quaternion;
 using Vector2 = UnityEngine.Vector2;
@@ -61,6 +62,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
         private static int GAIT = Animator.StringToHash("Gait");
         private static int IS_IN_AIR = Animator.StringToHash("IsInAir");
         private static int INSPECT = Animator.StringToHash("Inspect");
+
 
         private static Quaternion ANIMATED_OFFSET = Quaternion.Euler(90f, 0f, 0f);
         //private static Quaternion ANIMATED_OFFSET = Quaternion.identity;
@@ -322,7 +324,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
         {
             _initialRotation = transform.localRotation;
             _animator = GetComponent<Animator>();
-            _controller = transform.root.GetComponent<CharacterController>();
+            _controller = transform.root.GetComponentInChildren<CharacterController>();
             _recoilAnimation = GetComponent<RecoilAnimation>();
             _playerSound = GetComponent<FPSPlayerSound>();
 
@@ -403,18 +405,18 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
             Vector3 cameraPosition = -_localCameraPoint.position;
             Vector3 correctedComPos = new Vector3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
 
-            transform.localRotation = Quaternion.Euler(_lookInput.y, 0f, 0f);
-            transform.localPosition = transform.localRotation * correctedComPos - correctedComPos;
+            //transform.localRotation = Quaternion.Euler(_lookInput.y, 0f, 0f);
+            //transform.localPosition = transform.localRotation * correctedComPos - correctedComPos;
 
 
-            if (_controller != null)
-            {
-                Transform root = _controller.transform;
-                root.rotation *= Quaternion.Euler(0f, _lookInput.x, 0f);
-                Vector3 movement = root.forward * _moveInput.y + root.right * _moveInput.x;
-                movement *= _smoothGait * 1.5f;
-                _controller.Move(movement * Time.deltaTime);
-            }
+            // if (_controller != null)
+            // {
+            //     Transform root = _controller.transform;
+            //     root.rotation *= Quaternion.Euler(0f, _lookInput.x, 0f);
+            //     Vector3 movement = root.forward * _moveInput.y + root.right * _moveInput.x;
+            //     movement *= _smoothGait * 1.5f;
+            //     _controller.Move(movement * Time.deltaTime);
+            // }
         }
 
         private void SetupIkData(ref KTwoBoneIkData ikData, in KTransform target, in IKTransforms transforms,

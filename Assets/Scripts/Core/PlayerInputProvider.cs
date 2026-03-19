@@ -50,7 +50,8 @@ namespace Core
             // *但是* 我们的 FrameInput 是个结构体，Controller在Update里跑。
             // 为了安全起见，先用 IsPressed()，并在 Controller 里加一个落地重置锁，或者就用 Trigger 方式。
             // 简单起见，这里先映射为 bool 值：
-            i.Jump = _inputActions.GamePlay.Jump.IsPressed();
+            // 必须每次重新按下空格才能跳跃
+            i.Jump = _inputActions.GamePlay.Jump.WasPressedThisFrame();
 
             i.Crouch = _inputActions.GamePlay.Crouch.IsPressed();
             i.Sprint = _inputActions.GamePlay.Sprint.IsPressed();

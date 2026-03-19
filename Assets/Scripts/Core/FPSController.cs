@@ -2,11 +2,14 @@ using UnityEngine;
 
 namespace Core
 {
+    [DefaultExecutionOrder(-100)]
     [RequireComponent(typeof(CharacterController))]
     public class FPSController : MonoBehaviour
     {
         [Header("References")]
-        public Transform cameraContainer; // 摄像机父节点，用于控制垂直旋转
+        public Transform cameraContainer;
+        public Transform headBone;
+
         private CharacterController _cc;
         private IInputProvider _inputProvider;
 
@@ -14,172 +17,191 @@ namespace Core
         public float walkSpeed = 5f;
         public float runSpeed = 9f;
         public float crouchSpeed = 2.5f;
-        public float speedChangeRate = 10f; // 速度切换的平滑度
+        public float speedChangeRate = 10f;
+
+        // 🌟 新增：空中控制系统 (Air Control)
+        [Header("Air Control Settings")]
+        [Range(0f, 1f)]
+        public float airSpeedMultiplier = 0.5f; // 空中横向速度衰减 (50% 移动力)
+        public float airSmoothTime = 0.4f;      // 空中惯性阻尼 (越大在空中越难改变方向，松手后滑行越远)
 
         [Header("Jump & Gravity")]
-        public float jumpHeight = 1.2f;
-        public float gravity = -15.0f;
-        public float terminalVelocity = 53.0f; // 最大下落速度
+        // 🌟 修改：1.2m 是超人，0.6m 是标准战术成年男性的真实垂直起跳高度
+        public float jumpHeight = 0.6f;
+        public float gravity = -15.0f; // 保持 -15，这比地球重力(-9.8)大，能带来射击游戏需要的“干脆落地感”
+        public float terminalVelocity = 53.0f;
 
         [Header("Crouch System")]
-        public float crouchHeight = 1.0f;       // 蹲下时的碰撞盒高度
-        public float standHeight = 2.0f;        // 站立时的碰撞盒高度
+        public float crouchHeight = 1.0f;
+        public float standHeight = 2.0f;
         public float crouchTransitionSpeed = 10f;
-        public Vector3 crouchCenter = new Vector3(0, 0.5f, 0); // 蹲下时碰撞盒中心
-        public Vector3 standCenter = new Vector3(0, 1f, 0);    // 站立时碰撞盒中心
+        public Vector3 crouchCenter = new Vector3(0, 0.5f, 0);
+        public Vector3 standCenter = new Vector3(0, 1f, 0);
 
-        // --- 新增内容 ---
-        [Header("Camera Height Settings")]
-        public float cameraStandHeight = 1.6f;  // 站立时眼睛高度
-        public float cameraCrouchHeight = 0.8f; // 蹲下时眼睛高度 (通常比碰撞盒略低或持平)
-        // ----------------
-
-        [Header("Look Settings")]
-        public float lookClampTop = 85f;
-        public float lookClampBottom = -85f;
+        [Header("Look & Camera Settings")]
+        public float lookClampTop = 170f;
+        public float lookClampBottom = 90f;
+        public float cameraTrackingSpeed = 20f;
 
         // Runtime State
-        private float _cameraPitch = 0f; // 垂直角度记录
+        private float _cameraPitch = 0f;
         private float _currentSpeed;
-        private Vector3 _velocity; // 垂直方向速度(重力/跳跃)
+        private Vector3 _velocity;
         private float _targetHeight;
         private Vector3 _targetCenter;
+
+        private float _speedVelocity;
+        public float speedSmoothTime = 0.1f;
+
+        private Quaternion _originalRotation;
+
+        // 🌟 新增：记录空中松手瞬间的惯性方向
+        private Vector3 _airMomentumDirection = Vector3.zero;
+
+        [Header("Animation")]
+        public Animator animator;
+        private readonly int SPEED = Animator.StringToHash("Speed");
+        private readonly int _animVerticalVelocityHash = Animator.StringToHash("VerticalVelocity");
+        private readonly int _animIsGroundedHash = Animator.StringToHash("IsGrounded");
+
 
         private void Awake()
         {
             _cc = GetComponent<CharacterController>();
-            // 获取同一物体上的输入提供者（无论是Player还是AI）
             _inputProvider = GetComponent<IInputProvider>();
-
             _targetHeight = standHeight;
             _targetCenter = standCenter;
+            _originalRotation = cameraContainer.localRotation;
+            animator = GetComponentInChildren<Animator>();
         }
 
         private void Update()
         {
             if (_inputProvider == null) return;
-
-            // 1. 获取输入 (解耦核心)
             FrameInput input = _inputProvider.GetInput();
 
-            // 2. 执行逻辑
             HandleLook(input);
-            HandleMovement(input);
-            HandleGravityAndJump(input);
             HandleCrouch(input);
+
+            Vector3 horizontalMove = CalculateMovement(input);
+            Vector3 verticalMove = CalculateGravityAndJump(input);
+
+            _cc.Move((horizontalMove + verticalMove) * Time.deltaTime);
+            // ==========================================================
+            // 向 Animator 传递底层平滑速度，驱动下半身 Locomotion
+            // ==========================================================
+            if (animator != null)
+            {
+                // 🌟 新增：把垂直速度和地面状态实时传给动画机
+                animator.SetFloat(_animVerticalVelocityHash, _velocity.y);
+                animator.SetBool(_animIsGroundedHash, _cc.isGrounded);
+            }
         }
+
+        // private void LateUpdate()
+        // {
+        //     if (cameraContainer != null && headBone != null)
+        //     {
+        //         cameraContainer.position = Vector3.Lerp(cameraContainer.position, headBone.position, Time.deltaTime * cameraTrackingSpeed);
+        //     }
+        // }
 
         private void HandleLook(FrameInput input)
         {
-            // 水平旋转 (转身体)
+            // 🌟 无论在地面还是空中，视角旋转始终生效，带动整个身体转动
             transform.Rotate(Vector3.up * input.Look.x);
-
-            // 垂直旋转 (转摄像机容器)
             _cameraPitch -= input.Look.y;
             _cameraPitch = Mathf.Clamp(_cameraPitch, lookClampBottom, lookClampTop);
             cameraContainer.localRotation = Quaternion.Euler(_cameraPitch, 0f, 0f);
         }
 
-        private void HandleMovement(FrameInput input)
+        private Vector3 CalculateMovement(FrameInput input)
         {
-            // 确定目标速度
             float targetSpeed = walkSpeed;
             if (input.Sprint && !input.Crouch) targetSpeed = runSpeed;
             if (input.Crouch) targetSpeed = crouchSpeed;
 
-            // 如果没有输入，速度归零
-            if (input.Move == Vector2.zero) targetSpeed = 0.0f;
-
-            // 平滑速度变化 (防止瞬移感)
-            float currentHorizontalSpeed = new Vector3(_cc.velocity.x, 0.0f, _cc.velocity.z).magnitude;
-            float speedOffset = 0.1f;
-
-            if (currentHorizontalSpeed < targetSpeed - speedOffset || currentHorizontalSpeed > targetSpeed + speedOffset)
+            // 🌟 核心分轨：判断是在地面还是空中
+            if (_cc.isGrounded)
             {
-                _currentSpeed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * input.Move.magnitude, Time.deltaTime * speedChangeRate);
+                // ========== 地面逻辑 (绝对防穿模) ==========
+                if (input.Move == Vector2.zero)
+                {
+                    targetSpeed = 0f;
+                    _airMomentumDirection = Vector3.zero; // 落地瞬间清空空中惯性
+                    //return Vector3.zero; // 地面松手瞬间死死停住，完美配合 IK
+                }
+
+                _currentSpeed = Mathf.SmoothDamp(_currentSpeed, targetSpeed, ref _speedVelocity, speedSmoothTime);
+                Vector3 direction = (transform.right * input.Move.x + transform.forward * input.Move.y).normalized;
+                _airMomentumDirection = direction; // 随时记录起跳前最后一刻的方向
+                animator.SetFloat(SPEED,_currentSpeed);
+
+                return direction * _currentSpeed;
             }
             else
             {
-                _currentSpeed = targetSpeed;
-            }
+                // ========== 空中逻辑 (真实物理惯性) ==========
+                targetSpeed *= airSpeedMultiplier; // 空中最大横向速度减半
 
-            // 计算移动方向 (基于当前朝向)
-            Vector3 direction = new Vector3(input.Move.x, 0.0f, input.Move.y).normalized;
-            if (input.Move != Vector2.zero)
-            {
-                direction = transform.right * input.Move.x + transform.forward * input.Move.y;
-            }
+                if (input.Move == Vector2.zero)
+                {
+                    targetSpeed = 0.0f;
+                    // 在空中松开键盘，速度不会瞬间变0，而是像降落伞一样逐渐衰减
+                }
+                else
+                {
+                    // 在空中按住 WASD，方向会实时跟随你的鼠标视角转动
+                    _airMomentumDirection = (transform.right * input.Move.x + transform.forward * input.Move.y).normalized;
+                }
 
-            // 应用移动
-            _cc.Move(direction.normalized * (_currentSpeed * Time.deltaTime));
+                // 使用专门的 airSmoothTime 带来更粘稠的空中滞空感
+                _currentSpeed = Mathf.SmoothDamp(_currentSpeed, targetSpeed, ref _speedVelocity, airSmoothTime);
+
+                return _airMomentumDirection * _currentSpeed;
+            }
         }
 
-        private void HandleGravityAndJump(FrameInput input)
+        private Vector3 CalculateGravityAndJump(FrameInput input)
         {
-            // 地面检测
+            if ((_cc.collisionFlags & CollisionFlags.Above) != 0 && _velocity.y > 0)
+            {
+                _velocity.y = 0;
+            }
+
             if (_cc.isGrounded)
             {
-                // 即使在地面，也给一个微小的向下的力，确保isGrounded判定稳定
                 if (_velocity.y < 0.0f) _velocity.y = -2f;
 
-                // 跳跃逻辑
                 if (input.Jump)
                 {
-                    // 公式: v = sqrt(h * -2 * g)
                     _velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
                 }
             }
 
-            // 应用重力
             if (_velocity.y > -terminalVelocity)
             {
                 _velocity.y += gravity * Time.deltaTime;
             }
 
-            // 应用垂直移动
-            _cc.Move(_velocity * Time.deltaTime);
+            return _velocity;
         }
 
         private void HandleCrouch(FrameInput input)
         {
-            // 1. 判定目标状态
             bool isTryingToCrouch = input.Crouch;
 
-            // 站起时的头顶检测 (防止卡在障碍物里)
-            // 如果想站起来，但头顶有东西，被迫保持蹲下
-            if (!isTryingToCrouch && Physics.Raycast(cameraContainer.position, Vector3.up, 1.0f))
+            float castDistance = standHeight - crouchHeight;
+            if (!isTryingToCrouch && Physics.SphereCast(transform.position + crouchCenter, _cc.radius, Vector3.up, out _, castDistance))
             {
                 isTryingToCrouch = true;
             }
 
-            // 2. 设定物理(碰撞盒)的目标值
-            if (isTryingToCrouch)
-            {
-                _targetHeight = crouchHeight;
-                _targetCenter = crouchCenter;
-            }
-            else
-            {
-                _targetHeight = standHeight;
-                _targetCenter = standCenter;
-            }
+            _targetHeight = isTryingToCrouch ? crouchHeight : standHeight;
+            _targetCenter = isTryingToCrouch ? crouchCenter : standCenter;
 
-            // 3. 应用物理插值 (CharacterController)
             _cc.height = Mathf.Lerp(_cc.height, _targetHeight, Time.deltaTime * crouchTransitionSpeed);
             _cc.center = Vector3.Lerp(_cc.center, _targetCenter, Time.deltaTime * crouchTransitionSpeed);
-
-            // 4. --- 新增核心逻辑：处理摄像机高度 ---
-            // 根据当前是蹲还是站，决定摄像机的目标Y轴高度
-            float targetCamHeight = isTryingToCrouch ? cameraCrouchHeight : cameraStandHeight;
-
-            // 获取当前摄像机容器的本地坐标
-            Vector3 currentCamPos = cameraContainer.localPosition;
-
-            // 对 Y 轴进行独立的平滑插值
-            float newCamHeight = Mathf.Lerp(currentCamPos.y, targetCamHeight, Time.deltaTime * crouchTransitionSpeed);
-
-            // 应用新的高度
-            cameraContainer.localPosition = new Vector3(currentCamPos.x, newCamHeight, currentCamPos.z);
         }
     }
 }
