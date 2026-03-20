@@ -577,6 +577,23 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
             ProcessIkMotion(ref weaponTransform);
             ProcessRecoil(ref weaponTransform);
 
+            // ==========================================================
+            // 🌟 终极防穿模手术 2.0：全维空间云台补偿 (位移 + 旋转)
+            // ==========================================================
+            // 1. 获取插件底层以为的“水平静态摄像机”的世界坐标与旋转
+            KTransform rootT = new KTransform(transform);
+            KTransform staticCamWorld = rootT.GetWorldTransform(_localCameraPoint, false);
+
+            // 2. 核心数学：计算出【真实俯仰摄像机】与【水平静态摄像机】的旋转差值
+            Quaternion syncRot = cameraPoint.rotation * Quaternion.Inverse(staticCamWorld.rotation);
+
+            // 3. 核心矩阵转换：将武器以摄像机为圆心，精准旋转到你的真实俯仰角！
+            // 这样枪永远死死锁定在屏幕的固定位置，完美跟随脊椎弯曲！
+            Vector3 weaponOffsetFromCam = weaponTransform.position - staticCamWorld.position;
+            weaponTransform.position = cameraPoint.position + syncRot * weaponOffsetFromCam;
+            weaponTransform.rotation = syncRot * weaponTransform.rotation;
+            // ==========================================================
+
             weaponBone.position = weaponTransform.position;
             weaponBone.rotation = weaponTransform.rotation;
 

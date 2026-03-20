@@ -884,11 +884,21 @@ MonoBehaviour:
   crouchTransitionSpeed: 10
   crouchCenter: {x: 0, y: 0.5, z: 0}
   standCenter: {x: 0, y: 1, z: 0}
-  lookClampTop: 90
-  lookClampBottom: 90
+  lookClampTop: 170
+  lookClampBottom: 5
   cameraTrackingSpeed: 20
+  spine1: {fileID: 502554616784345433}
+  spine2: {fileID: 502554616784345432}
+  spine3: {fileID: 502554616784345431}
+  neck: {fileID: 502554616784345430}
+  spine1Weight: 0.2
+  spine2Weight: 0.3
+  spine3Weight: 0.3
+  neckWeight: 0.2
+  forwardPitchCenter: 90
+  bendAxis: {x: 0, y: 0, z: 1}
   speedSmoothTime: 0.1
-  animator: {fileID: 0}
+  animator: {fileID: 502554616784345434}
 --- !u!143 &1622768282
 CharacterController:
   m_ObjectHideFlags: 0
@@ -1214,6 +1224,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3615467884513605621, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3615467884513605621, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3615467884513605621, guid: 9eb7b99039caf974089006adec19357b, type: 3}
       propertyPath: m_LocalRotation.w
       value: 0.7071068
       objectReference: {fileID: 0}
@@ -1282,6 +1300,31 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+--- !u!4 &502554616784345430 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8493835297117377393, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+  m_PrefabInstance: {fileID: 502554616784345429}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &502554616784345431 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1407867259244663273, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+  m_PrefabInstance: {fileID: 502554616784345429}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &502554616784345432 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6426570497598502278, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+  m_PrefabInstance: {fileID: 502554616784345429}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &502554616784345433 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5798414674561321308, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+  m_PrefabInstance: {fileID: 502554616784345429}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &502554616784345434 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 1769270857531387477, guid: 9eb7b99039caf974089006adec19357b, type: 3}
+  m_PrefabInstance: {fileID: 502554616784345429}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

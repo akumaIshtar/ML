@@ -19,16 +19,14 @@ namespace Core
         public float crouchSpeed = 2.5f;
         public float speedChangeRate = 10f;
 
-        // 🌟 新增：空中控制系统 (Air Control)
         [Header("Air Control Settings")]
         [Range(0f, 1f)]
-        public float airSpeedMultiplier = 0.5f; // 空中横向速度衰减 (50% 移动力)
-        public float airSmoothTime = 0.4f;      // 空中惯性阻尼 (越大在空中越难改变方向，松手后滑行越远)
+        public float airSpeedMultiplier = 0.5f;
+        public float airSmoothTime = 0.4f;
 
         [Header("Jump & Gravity")]
-        // 🌟 修改：1.2m 是超人，0.6m 是标准战术成年男性的真实垂直起跳高度
         public float jumpHeight = 0.6f;
-        public float gravity = -15.0f; // 保持 -15，这比地球重力(-9.8)大，能带来射击游戏需要的“干脆落地感”
+        public float gravity = -15.0f;
         public float terminalVelocity = 53.0f;
 
         [Header("Crouch System")]
@@ -40,8 +38,31 @@ namespace Core
 
         [Header("Look & Camera Settings")]
         public float lookClampTop = 170f;
-        public float lookClampBottom = 90f;
+        public float lookClampBottom = 5f;
         public float cameraTrackingSpeed = 20f;
+
+        // ==========================================================
+        // 🌟 新增：上半身合理弯曲系统 (Aim Offset) 变量区
+        // ==========================================================
+        [Header("Aim Offset (Upper Body Bending)")]
+        public Transform spine1;
+        public Transform spine2;
+        public Transform spine3;
+        public Transform neck;
+
+        [Range(0f, 1f)] public float spine1Weight = 0.2f;
+        [Range(0f, 1f)] public float spine2Weight = 0.3f;
+        [Range(0f, 1f)] public float spine3Weight = 0.3f;
+        [Range(0f, 1f)] public float neckWeight = 0.2f;
+
+        [Header("Virtual Parenting")]
+        [Tooltip("将 ik_hand_root 拖进来，代码会带它跟着 spine3 一起动，且绝对不破坏动画！")]
+        public Transform ikHandRoot;
+
+        [Tooltip("因为你的视角范围是90~170，这里填入看向正前方的Pitch值（比如130）。\n如果弯曲方向反了，可以把bendAxis改成 ( -1, 0, 0 )")]
+        public float forwardPitchCenter = 90f;
+        public Vector3 bendAxis = Vector3.right; // 默认绕X轴前后弯曲 (取决于你的模型骨架)
+        // ==========================================================
 
         // Runtime State
         private float _cameraPitch = 0f;
@@ -54,8 +75,6 @@ namespace Core
         public float speedSmoothTime = 0.1f;
 
         private Quaternion _originalRotation;
-
-        // 🌟 新增：记录空中松手瞬间的惯性方向
         private Vector3 _airMomentumDirection = Vector3.zero;
 
         [Header("Animation")]
@@ -73,6 +92,9 @@ namespace Core
             _targetCenter = standCenter;
             _originalRotation = cameraContainer.localRotation;
             animator = GetComponentInChildren<Animator>();
+
+            // 如果初始_cameraPitch是平视，将其设定为平视中心值
+            _cameraPitch = forwardPitchCenter;
         }
 
         private void Update()
@@ -87,28 +109,66 @@ namespace Core
             Vector3 verticalMove = CalculateGravityAndJump(input);
 
             _cc.Move((horizontalMove + verticalMove) * Time.deltaTime);
-            // ==========================================================
-            // 向 Animator 传递底层平滑速度，驱动下半身 Locomotion
-            // ==========================================================
+
             if (animator != null)
             {
-                // 🌟 新增：把垂直速度和地面状态实时传给动画机
                 animator.SetFloat(_animVerticalVelocityHash, _velocity.y);
                 animator.SetBool(_animIsGroundedHash, _cc.isGrounded);
             }
         }
 
-        // private void LateUpdate()
-        // {
-        //     if (cameraContainer != null && headBone != null)
-        //     {
-        //         cameraContainer.position = Vector3.Lerp(cameraContainer.position, headBone.position, Time.deltaTime * cameraTrackingSpeed);
-        //     }
-        // }
+        // ==========================================================
+        // 🌟 新增：解除注释的 LateUpdate，处理身体合理弯曲
+        // ==========================================================
+        private void LateUpdate()
+        {
+            // ==========================================================
+            // 🌟 1. 弯曲前：记录虚拟锚点的绝对关系
+            // ==========================================================
+            Vector3 ikRootLocalPos = Vector3.zero;
+            Quaternion ikRootLocalRot = Quaternion.identity;
+
+            if (spine3 != null && ikHandRoot != null)
+            {
+                // 此时 Animator 刚算完动画，ik_hand_root 在脚底(0,0,0)
+                // 我们算出它相对于没弯曲前的 spine3 的“虚拟局部坐标”
+                ikRootLocalPos = Quaternion.Inverse(spine3.rotation) * (ikHandRoot.position - spine3.position);
+                ikRootLocalRot = Quaternion.Inverse(spine3.rotation) * ikHandRoot.rotation;
+            }
+
+            // ==========================================================
+            // 🌟 2. 物理执行：弯曲上半身骨骼
+            // ==========================================================
+            float bendAngle = _cameraPitch - forwardPitchCenter;
+
+            if (spine1 != null) spine1.localRotation *= Quaternion.AngleAxis(bendAngle * spine1Weight, bendAxis);
+            if (spine2 != null) spine2.localRotation *= Quaternion.AngleAxis(bendAngle * spine2Weight, bendAxis);
+            if (spine3 != null) spine3.localRotation *= Quaternion.AngleAxis(bendAngle * spine3Weight, bendAxis);
+            if (neck != null) neck.localRotation *= Quaternion.AngleAxis(bendAngle * neckWeight, bendAxis);
+
+            // ==========================================================
+            // 🌟 3. 弯曲后：执行“虚拟绑定”同步
+            // ==========================================================
+            if (spine3 != null && ikHandRoot != null)
+            {
+                // 此时 spine3 已经弯下去了！肩膀也下去了！
+                // 我们把刚才存下来的坐标，赋予给已经弯曲的 spine3。
+                // 枪的锚点就会像绑在肩膀上一样，完美无瑕地跟着身体起伏！
+                ikHandRoot.position = spine3.position + spine3.rotation * ikRootLocalPos;
+                ikHandRoot.rotation = spine3.rotation * ikRootLocalRot;
+            }
+
+            // ==========================================================
+            // 🌟 4. 最后：摄像机吸附到已经弯曲好的头部（Eye_Socket）
+            // ==========================================================
+            if (cameraContainer != null && headBone != null)
+            {
+                cameraContainer.position = headBone.position;
+            }
+        }
 
         private void HandleLook(FrameInput input)
         {
-            // 🌟 无论在地面还是空中，视角旋转始终生效，带动整个身体转动
             transform.Rotate(Vector3.up * input.Look.x);
             _cameraPitch -= input.Look.y;
             _cameraPitch = Mathf.Clamp(_cameraPitch, lookClampBottom, lookClampTop);
@@ -121,41 +181,34 @@ namespace Core
             if (input.Sprint && !input.Crouch) targetSpeed = runSpeed;
             if (input.Crouch) targetSpeed = crouchSpeed;
 
-            // 🌟 核心分轨：判断是在地面还是空中
             if (_cc.isGrounded)
             {
-                // ========== 地面逻辑 (绝对防穿模) ==========
                 if (input.Move == Vector2.zero)
                 {
                     targetSpeed = 0f;
-                    _airMomentumDirection = Vector3.zero; // 落地瞬间清空空中惯性
-                    //return Vector3.zero; // 地面松手瞬间死死停住，完美配合 IK
+                    _airMomentumDirection = Vector3.zero;
                 }
 
                 _currentSpeed = Mathf.SmoothDamp(_currentSpeed, targetSpeed, ref _speedVelocity, speedSmoothTime);
                 Vector3 direction = (transform.right * input.Move.x + transform.forward * input.Move.y).normalized;
-                _airMomentumDirection = direction; // 随时记录起跳前最后一刻的方向
-                animator.SetFloat(SPEED,_currentSpeed);
+                _airMomentumDirection = direction;
+                animator.SetFloat(SPEED, _currentSpeed);
 
                 return direction * _currentSpeed;
             }
             else
             {
-                // ========== 空中逻辑 (真实物理惯性) ==========
-                targetSpeed *= airSpeedMultiplier; // 空中最大横向速度减半
+                targetSpeed *= airSpeedMultiplier;
 
                 if (input.Move == Vector2.zero)
                 {
                     targetSpeed = 0.0f;
-                    // 在空中松开键盘，速度不会瞬间变0，而是像降落伞一样逐渐衰减
                 }
                 else
                 {
-                    // 在空中按住 WASD，方向会实时跟随你的鼠标视角转动
                     _airMomentumDirection = (transform.right * input.Move.x + transform.forward * input.Move.y).normalized;
                 }
 
-                // 使用专门的 airSmoothTime 带来更粘稠的空中滞空感
                 _currentSpeed = Mathf.SmoothDamp(_currentSpeed, targetSpeed, ref _speedVelocity, airSmoothTime);
 
                 return _airMomentumDirection * _currentSpeed;
