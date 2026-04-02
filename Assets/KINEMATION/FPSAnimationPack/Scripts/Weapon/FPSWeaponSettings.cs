@@ -7,14 +7,16 @@ using UnityEngine;
 
 namespace KINEMATION.FPSAnimationPack.Scripts.Weapon
 {
+    public enum WeaponClassType{ Rifle = 0,Pistol = 1,Melee = 2};
     [CreateAssetMenu(fileName = "NewWeaponSettings", menuName = "KINEMATION/FPS Animation Pack/Weapon Settings")]
     public class FPSWeaponSettings : ScriptableObject
     {
         [Header("General")]
+        public WeaponClassType weaponClass;
         public RuntimeAnimatorController characterController;
         public RecoilAnimData recoilAnimData;
         public FPSCameraShake cameraShake;
-        
+
         [Header("IK")]
         public Vector3 ikOffset;
         public Vector3 leftClavicleOffset;
@@ -22,7 +24,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Weapon
         public Vector3 aimPointOffset;
         public Quaternion rightHandSprintOffset = Quaternion.identity;
         [Range(0f, 1f)] public float adsBlend = 0f;
-        
+
         [Header("Gameplay")]
         [Min(0f)] public float fireRate = 600f;
         [Min(1)] public int ammo = 1;
@@ -33,7 +35,7 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Weapon
         public bool hasEquipOverride;
         public bool hasFireOut;
         public bool useSprintTriggerDiscipline = true;
-        
+
         [Header("SFX")]
         public List<AudioClip> fireSounds;
         public Vector2 firePitchRange = Vector2.one;

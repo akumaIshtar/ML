@@ -314,6 +314,60 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
         {
             return _weapons[_activeWeaponIndex];
         }
+        // --- 新增：供外部系统调用的公共输入接口 ---
+        public void SetAimState(bool isAiming)
+        {
+            bool wasAiming = _isAiming;
+            _isAiming = isAiming;
+            if (_recoilAnimation != null) _recoilAnimation.isAiming = _isAiming;
+
+            if (wasAiming != _isAiming)
+            {
+                if (_playerSound != null) _playerSound.PlayAimSound(_isAiming);
+                PlayIkMotion(playerSettings.aimingMotion);
+            }
+        }
+
+        public void SetMoveInput(Vector2 move)
+        {
+            _moveInput = move;
+        }
+
+        public void HandleWeaponScroll(float scrollValue)
+        {
+            if (scrollValue == 0f) return;
+            if (_weapons == null || _weapons.Count <= 1) return; // 只有一把枪或没枪就不切
+
+
+            GetActiveWeapon().gameObject.SetActive(false);
+
+            // 根据滚轮方向决定是向上切还是向下切
+            _activeWeaponIndex += scrollValue > 0f ? 1 : -1;
+
+            // 循环处理索引
+            if (_activeWeaponIndex < 0) _activeWeaponIndex = _weapons.Count - 1;
+            if (_activeWeaponIndex > _weapons.Count - 1) _activeWeaponIndex = 0;
+
+            GetActiveWeapon().gameObject.SetActive(true);
+
+            // 调用装备逻辑（这里使用 _Immediate 可以跳过漫长的切枪动画，
+            // 如果你想看切枪动画，可以调用 GetActiveWeapon().OnEquipped()）
+            GetActiveWeapon().OnEquipped_Immediate();
+
+            // 4. 【核心修复】：强行打断 Unity 的状态继承！
+            Animator anim = GetComponent<Animator>();
+            if (anim != null)
+            {
+                // Rebind() 会强行解绑所有骨骼并重新初始化，彻底清空前一把枪残留的任何动作和过渡线！
+                anim.Rebind();
+                // 强制引擎在当前帧立刻结算，不准把上一把枪的残影带到下一帧！
+                anim.Update(0f);
+            }
+
+            // 如果你有装备音效，可以在这里播放
+            if (_playerSound != null) _playerSound.PlayEquipSound();
+        }
+        // ----------------------------------------
 
         public FPSWeapon GetActivePrefab()
         {
@@ -444,6 +498,8 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
         {
             var root = transform;
             KTransform rootT = new KTransform(root);
+            //构造一个顺着视线俯仰的虚拟参考系
+            //if(cameraPoint!=null) rootT.rotation = cameraPoint.rotation;
             var weaponOffset = GetActiveWeapon().weaponSettings.ikOffset;
 
             float mask = 1f - _animator.GetFloat(TAC_SPRINT_WEIGHT);
@@ -576,23 +632,6 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Player
             ProcessAdditives(ref weaponTransform);
             ProcessIkMotion(ref weaponTransform);
             ProcessRecoil(ref weaponTransform);
-
-            // ==========================================================
-            // 🌟 终极防穿模手术 2.0：全维空间云台补偿 (位移 + 旋转)
-            // ==========================================================
-            // 1. 获取插件底层以为的“水平静态摄像机”的世界坐标与旋转
-            KTransform rootT = new KTransform(transform);
-            KTransform staticCamWorld = rootT.GetWorldTransform(_localCameraPoint, false);
-
-            // 2. 核心数学：计算出【真实俯仰摄像机】与【水平静态摄像机】的旋转差值
-            Quaternion syncRot = cameraPoint.rotation * Quaternion.Inverse(staticCamWorld.rotation);
-
-            // 3. 核心矩阵转换：将武器以摄像机为圆心，精准旋转到你的真实俯仰角！
-            // 这样枪永远死死锁定在屏幕的固定位置，完美跟随脊椎弯曲！
-            Vector3 weaponOffsetFromCam = weaponTransform.position - staticCamWorld.position;
-            weaponTransform.position = cameraPoint.position + syncRot * weaponOffsetFromCam;
-            weaponTransform.rotation = syncRot * weaponTransform.rotation;
-            // ==========================================================
 
             weaponBone.position = weaponTransform.position;
             weaponBone.rotation = weaponTransform.rotation;

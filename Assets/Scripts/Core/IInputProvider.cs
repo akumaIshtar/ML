@@ -10,6 +10,11 @@ namespace Core
         public bool Crouch;       // 蹲下
         public bool Sprint;       // 冲刺
         public bool Fire;         // 开火 (预留给下一阶段)
+        public bool Reload;       //换弹R
+        public bool ThrowGrenade; //扔雷G
+        public bool Aim;          //瞄准右键
+        public float ChangeWeaponScroll; //向上为正数，向下滚为负数，不滚为0
+        public bool ChangeFireMode;//切换射击模式B
     }
 
     public interface IInputProvider

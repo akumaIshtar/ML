@@ -56,6 +56,11 @@ namespace Core
             i.Crouch = _inputActions.GamePlay.Crouch.IsPressed();
             i.Sprint = _inputActions.GamePlay.Sprint.IsPressed();
             i.Fire = _inputActions.GamePlay.Fire.IsPressed();
+            i.Reload = _inputActions.GamePlay.Reload.WasPressedThisFrame();
+            i.ThrowGrenade = _inputActions.GamePlay.ThrowGrenade.WasPressedThisFrame();
+            i.Aim = _inputActions.GamePlay.Aim.IsPressed();
+            i.ChangeWeaponScroll = _inputActions.GamePlay.ChangeWeapon.ReadValue<float>();
+            i.ChangeFireMode = _inputActions.GamePlay.ChangeFireMode.WasPressedThisFrame();
 
             return i;
         }
