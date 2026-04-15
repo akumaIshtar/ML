@@ -5,7 +5,7 @@ using UnityEngine.Events;
 
 namespace Core
 {
-    public class Health : MonoBehaviour
+    public class Health : MonoBehaviour, IDamageable
     {
         [Header("Settings")]
         public float maxHealth = 100f;

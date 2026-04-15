@@ -19,6 +19,10 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Weapon
         
         [SerializeField] protected FireMode fireMode = FireMode.Semi;
 
+        // 【新增】暴露给外部 Hitscan 逻辑的回调事件
+        public event System.Action OnWeaponFired;
+        public event System.Action OnAmmoEmpty;
+
         [HideInInspector] public KTransform rightHandPose;
         [HideInInspector] public KTransform adsPose;
 
@@ -189,6 +193,14 @@ namespace KINEMATION.FPSAnimationPack.Scripts.Weapon
                 : FIRE, -1, 0f);
 
             _activeAmmo--;
+            
+            // 【新增】触发外部（例如 HitscanShooter）的开火逻辑
+            OnWeaponFired?.Invoke();
+
+            if (_activeAmmo <= 0)
+            {
+                OnAmmoEmpty?.Invoke();
+            }
             
             if (fireMode == FireMode.Semi) return;
             Invoke(nameof(OnFire), 60f / weaponSettings.fireRate);

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
+
 public class GeminiSceneAssistant : EditorWindow
 {
     private string apiKey = "";
